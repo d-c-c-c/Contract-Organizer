@@ -29,31 +29,11 @@ payload = {
 }
 
 
-
-"""
-Finds the total amount of contract rewards when given a request dictionary.
-"""
-def get_award_amount(dict):
-    awardTotal = 0
-    for i in range(len(dict['results'])):
-        awardTotal += dict['results'][i]["Award Amount"]
-    return awardTotal
-
-"""
-Prints the awards in descending order when given a request dictionary.
-"""
-def print_awards(dict):
-    if len(dict['results']) == 0:
-        print("No results found.")
-        return
-    else:
-        for i in range(len(dict['results'])):
-            print(f"Award #{int(i+1)}: {dict['results'][i]['Award Amount']:.2f} ")
-        return
-
-
 """Pandas Dataframe work"""
 
+"""
+Generates a csv file to import into a spreadsheet program.
+"""
 def generateDataFile(dict):
     
     if len(dict) == 0:
@@ -76,25 +56,28 @@ def generateDataFile(dict):
 
 
 
-
 def main():
-    #Accepting user input for the desired company
-    recipient = ""
-    while len(recipient) <= 2:
-        recipient = input("Input the name or SAM UEI number of the desired company. ")
-        if len(recipient) <= 2:
-            print("Please enter more than two characters.")
+    sentinel = True
+    while sentinel:
+        #Accepting user input for the desired company
+        recipient = ""
+        while len(recipient) <= 2:
+            recipient = input("Input the name or SAM UEI number of the desired company. Type QUIT to exit.  ")
+            if len(recipient) <= 2:
+                print("Please enter more than two characters.")
+            if recipient.lower() == 'quit':
+                sentinel = False
 
-    payload['filters']['recipient_search_text'] = [f'{recipient}']
+        payload['filters']['recipient_search_text'] = [f'{recipient}']
 
-    #TODO: HTTP Error handling
-    request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload)
+        #TODO: HTTP Error handling
+        request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload)
 
-    request_dict = request.json()
+        request_dict = request.json()
 
-    
+        
 
-    generateDataFile(request_dict)
+        generateDataFile(request_dict)
     
 
 if __name__=="__main__": 
