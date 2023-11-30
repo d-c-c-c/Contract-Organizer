@@ -61,12 +61,12 @@ def main():
     while sentinel:
         #Accepting user input for the desired company
         recipient = ""
-        while len(recipient) <= 2:
-            recipient = input("Input the name or SAM UEI number of the desired company. Type QUIT to exit.  ")
-            if len(recipient) <= 2:
-                print("Please enter more than two characters.")
-            if recipient.lower() == 'quit':
-                sentinel = False
+        
+        recipient = input("Input the name or SAM UEI number of the desired company. Type QUIT to exit.  ")
+        if len(recipient) <= 2:
+            print("Please enter more than two characters.")
+        if recipient.lower() == 'quit':
+            sentinel = False
 
         payload['filters']['recipient_search_text'] = [f'{recipient}']
 
