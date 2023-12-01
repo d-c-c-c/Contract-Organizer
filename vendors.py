@@ -36,30 +36,26 @@ Generates a csv file to import into a spreadsheet program.
 """
 def generateDataFile(dict):
     
-    if len(dict) == 0:
-        print("No results found.")
+    try:
+        #Normalizing content from Results column
+        res_data = pd.json_normalize(dict['results'])
+
+        #Creating a Pandas dataframe for the json data and then copying desired columns
+        df = pd.DataFrame(data=res_data)
+        df2 = df[['Award ID','Recipient Name','Start Date','End Date','Award Amount']].copy()
+
+        #Porting data to a csv
+
+        #TODO: Change location where data is saved
+        #TODO: Possibly make persistent data.txt instead of overwriting data
+        df2.to_csv('data.txt', sep="\t", index=False)
         return
-    else:
-        try:
-            #Normalizing content from Results column
-            res_data = pd.json_normalize(dict['results'])
-
-            #Creating a Pandas dataframe for the json data and then copying desired columns
-            df = pd.DataFrame(data=res_data)
-            df2 = df[['Award ID','Recipient Name','Start Date','End Date','Award Amount']].copy()
-
-            #Porting data to a csv
-
-            #TODO: Change location where data is saved
-            #TODO: Possibly make persistent data.txt instead of overwriting data
-            df2.to_csv('data.txt', sep="\t", index=False)
-            return
-        except KeyError as e:
-            print("ERROR: Company name or SAM UEI not found.")
+    except KeyError as e:
+        print("ERROR: Company name or SAM UEI not found.")
 
 
 
-def main():#
+def main():
     sentinel = True
     while sentinel:
         #Accepting user input for the desired company
@@ -68,6 +64,7 @@ def main():#
         recipient = input("Input the name or SAM UEI number of the desired company. Type QUIT to exit.  ")
         if len(recipient) <= 2:
             print("Please enter more than two characters.")
+            continue
         if recipient.lower() == 'quit':
             sentinel = False
             break
