@@ -1,4 +1,5 @@
 import requests
+import csv
 import pandas as pd
 
 #POST request to send to the API

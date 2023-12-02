@@ -53,6 +53,7 @@ $RECYCLE.BIN/
 
 env/
 pycache/
+__pycache__/
 *.txt
 *.csv
 *.xlsx
