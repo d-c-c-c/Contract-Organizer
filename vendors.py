@@ -86,7 +86,6 @@ def main():
     #Resetting index to 6
     #NOTE: Hard-coded value. Need to find a way to make this value dynamic
     df.index = df.index-6
-    print(df)
     #Response dictionary: Final dictionary to be used to build the csv file
 
     """
@@ -114,7 +113,6 @@ def main():
 
     pf2 = pd.DataFrame.from_dict(res_dict['results'])
     
-    print(pf2)
 
     # #TODO: Check if data.txt exists and then make a txt file
 
