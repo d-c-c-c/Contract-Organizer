@@ -41,7 +41,8 @@ def processRequest(recipient, payload):
     try:
         request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
         request.raise_for_status()
-        request_dict = request.json()   
+        request_dict = request.json()
+        time.sleep(0.25)   
     except requests.exceptions.HTTPError as errh:
         print(errh)
     except requests.exceptions.ConnectionError as errc:
@@ -75,32 +76,6 @@ def exists(file):
     check_file = os.path.isfile(path)
     return check_file
 
-
-"""
-Generates a csv file to import into a spreadsheet program.
-TODO: Delete and remake to suit new logic
-"""
-# def generateDataFile(dict):
-    
-#     try:
-#         #Normalizing content from Results column
-#         res_data = pd.json_normalize(dict['results'])
-
-#         #Creating a Pandas dataframe for the json data and then copying desired columns
-#         df = pd.DataFrame(data=res_data)
-#         df2 = df[['Award ID','Recipient Name','Start Date','End Date','Award Amount']].copy()
-
-#         #Porting data to a csv
-
-#         #TODO: Change location where data is saved
-#         #TODO: Possibly make persistent data.txt instead of overwriting data
-#         df2.to_csv('data.txt', sep="\t", index=False)
-#         return
-#     except KeyError as e:
-#         print("ERROR: Company name or SAM UEI not found.")
-
-
-
 def main():
     # Reading in and sanitizing the data from the csv file
     pd.options.display.float_format = '{:.2f}'.format
@@ -108,6 +83,9 @@ def main():
     df = df[['Vendor', 'SAM UEI']]
     #Drops NaN values from the table
     df = df.dropna()
+    #Resetting index to 6
+    #NOTE: Hard-coded value. Need to find a way to make this value dynamic
+    df.index = df.index-6
     print(df)
     #Response dictionary: Final dictionary to be used to build the csv file
 
@@ -115,35 +93,35 @@ def main():
     NOTE: Pretty slow execution, especially if we'll be dealing with hundreds/thousands of companies.
     Function calls slow down execution, so maybe just do everything inside main? Leads to messier code but potentially faster execution times
     """
-    # start = time.time()
-    # res_dict = {'results':[]}
-    # for i in range(len(df['SAM UEI'])):
+    start = time.time()
+    res_dict = {'results':[]}
+    for i in range(len(df['SAM UEI'])):
         
-    #     #Response object in the form of a python dictionary
+        #Response object in the form of a python dictionary
         
-    #     response = processRequest(df['SAM UEI'][i], payload)
+        response = processRequest(df['SAM UEI'][i], payload)
         
-    #     #Current award total being processed
-    #     curAwardTotal = getAwardTotal(response)
+        #Current award total being processed
+        curAwardTotal = getAwardTotal(response)
        
-    #     #Current company being processed
-    #     curCompany = df['Vendor'][i]
+        #Current company being processed
+        curCompany = df['Vendor'][i]
 
-    #     #Appends the company name and total award amount to the dictionary
-    #     res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
+        #Appends the company name and total award amount to the dictionary
+        res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
 
-    #     print(f"Processed {i+1}/{len(df['SAM UEI'])} items...")
+        print(f"Processed {i+1}/{len(df['SAM UEI'])} items...")
 
-    # pf2 = pd.DataFrame.from_dict(res_dict['results'])
+    pf2 = pd.DataFrame.from_dict(res_dict['results'])
     
-    # print(pf2)
+    print(pf2)
 
     # #TODO: Check if data.txt exists and then make a txt file
 
-    # pf2.to_csv("data.txt", sep='\t', index=False)
-    # end = time.time()
+    pf2.to_csv("data.txt", sep='\t', index=False)
+    end = time.time()
 
-    # print(f"Process finished in: {end - start:2f} seconds")
+    print(f"Process finished in: {end - start:2f} seconds")
 
 if __name__=="__main__": 
     main() 
