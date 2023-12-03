@@ -1,7 +1,13 @@
-import requests
+import requests, requests_cache
+from requests_cache import CachedSession
 import os.path
 import pandas as pd
 import time
+
+#Session Caching settings
+
+session = CachedSession(allowable_methods=('Get, POST'), expire_after=60)
+
 #POST request to send to the API
 payload = {
     "subawards": "false",
@@ -51,7 +57,6 @@ def processRequest(recipient, payload):
         print(errt)
     except requests.exceptions.RequestException as erre:
         print(erre)
-    return request_dict
 
 
 
@@ -98,7 +103,24 @@ def main():
         
         #Response object in the form of a python dictionary
         
-        response = processRequest(df['SAM UEI'][i], payload)
+        payload['filters']['recipient_search_text'] = [f'{df["SAM UEI"][i]}']
+        try:
+            request = session.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
+            request.raise_for_status()
+            response = request.json()
+ 
+        except requests.exceptions.HTTPError as errh:
+            print(errh)
+        except requests.exceptions.ConnectionError as errc:
+            print(errc)
+        except requests.exceptions.Timeout as errt:
+            print(errt)
+        except requests.exceptions.RequestException as erre:
+            print(erre)
+        except Exception as e: #Catch generic exceptions
+            print(e)
+
+        #response = processRequest(df['SAM UEI'][i], payload)
         
         #Current award total being processed
         curAwardTotal = getAwardTotal(response)

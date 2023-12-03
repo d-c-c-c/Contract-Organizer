@@ -57,3 +57,4 @@ __pycache__/
 *.txt
 *.csv
 *.xlsx
+*.sqlite
