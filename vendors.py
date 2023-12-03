@@ -1,7 +1,7 @@
 import requests
-import csv
+import os.path
 import pandas as pd
-
+import time
 #POST request to send to the API
 payload = {
     "subawards": "false",
@@ -33,61 +33,117 @@ payload = {
 """Pandas Dataframe work"""
 
 """
-Generates a csv file to import into a spreadsheet program.
+Sends a call to the API after being given the recipient name from a DataFrame object and a POST request payload.
+Returns "request_dict": The response object from the API Call in the form of a python dictionary.
 """
-def generateDataFile(dict):
-    
+def processRequest(recipient, payload):
+    payload['filters']['recipient_search_text'] = [f'{recipient}']
     try:
-        #Normalizing content from Results column
-        res_data = pd.json_normalize(dict['results'])
+        request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
+        request.raise_for_status()
+        request_dict = request.json()   
+    except requests.exceptions.HTTPError as errh:
+        print(errh)
+    except requests.exceptions.ConnectionError as errc:
+        print(errc)
+    except requests.exceptions.Timeout as errt:
+        print(errt)
+    except requests.exceptions.RequestException as erre:
+        print(erre)
+    return request_dict
 
-        #Creating a Pandas dataframe for the json data and then copying desired columns
-        df = pd.DataFrame(data=res_data)
-        df2 = df[['Award ID','Recipient Name','Start Date','End Date','Award Amount']].copy()
 
-        #Porting data to a csv
 
-        #TODO: Change location where data is saved
-        #TODO: Possibly make persistent data.txt instead of overwriting data
-        df2.to_csv('data.txt', sep="\t", index=False)
-        return
-    except KeyError as e:
-        print("ERROR: Company name or SAM UEI not found.")
+           
+"""
+Calculates the total amount of contract award money for a specific company
+"""
+def getAwardTotal(dict):
+    awardTotal = 0
+    if len(dict['results']) == 0:
+        return awardTotal
+    else:
+        for i in range(len(dict['results'])):
+            awardTotal += dict['results'][i]['Award Amount']
+    return awardTotal
+
+"""
+Checks if the data file already exists for not
+"""
+def exists(file):
+    path = f'./{file}'
+    check_file = os.path.isfile(path)
+    return check_file
+
+
+"""
+Generates a csv file to import into a spreadsheet program.
+TODO: Delete and remake to suit new logic
+"""
+# def generateDataFile(dict):
+    
+#     try:
+#         #Normalizing content from Results column
+#         res_data = pd.json_normalize(dict['results'])
+
+#         #Creating a Pandas dataframe for the json data and then copying desired columns
+#         df = pd.DataFrame(data=res_data)
+#         df2 = df[['Award ID','Recipient Name','Start Date','End Date','Award Amount']].copy()
+
+#         #Porting data to a csv
+
+#         #TODO: Change location where data is saved
+#         #TODO: Possibly make persistent data.txt instead of overwriting data
+#         df2.to_csv('data.txt', sep="\t", index=False)
+#         return
+#     except KeyError as e:
+#         print("ERROR: Company name or SAM UEI not found.")
 
 
 
 def main():
-    sentinel = True
-    while sentinel:
-        #Accepting user input for the desired company
-        recipient = ""
+    # Reading in and sanitizing the data from the csv file
+    pd.options.display.float_format = '{:.2f}'.format
+    df = pd.read_csv('vendorssheet.csv')
+    df = df[['Vendor', 'SAM UEI']]
+    #Drops NaN values from the table
+    df = df.dropna()
+    print(df)
+    #Response dictionary: Final dictionary to be used to build the csv file
 
-        recipient = input("Input the name or SAM UEI number of the desired company. Type QUIT to exit.  ")
-        if len(recipient) <= 2:
-            print("Please enter more than two characters.")
-            continue
-        if recipient.lower() == 'quit':
-            sentinel = False
-            break
+    """
+    NOTE: Pretty slow execution, especially if we'll be dealing with hundreds/thousands of companies.
+    Function calls slow down execution, so maybe just do everything inside main? Leads to messier code but potentially faster execution times
+    """
+    # start = time.time()
+    # res_dict = {'results':[]}
+    # for i in range(len(df['SAM UEI'])):
+        
+    #     #Response object in the form of a python dictionary
+        
+    #     response = processRequest(df['SAM UEI'][i], payload)
+        
+    #     #Current award total being processed
+    #     curAwardTotal = getAwardTotal(response)
+       
+    #     #Current company being processed
+    #     curCompany = df['Vendor'][i]
 
-        #Add company name or SAM UEI to the payload
-        payload['filters']['recipient_search_text'] = [f'{recipient}']
+    #     #Appends the company name and total award amount to the dictionary
+    #     res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
 
-        try:
-            request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload, timeout=5)
-            request.raise_for_status()
-            request_dict = request.json()
-        except requests.exceptions.HTTPError as errh:
-            print(errh)
-        except requests.exceptions.ConnectionError as errc:
-            print(errc)
-        except requests.exceptions.Timeout as errt:
-            print(errt)
-        except requests.exceptions.RequestException as erre:
-            print(erre)
+    #     print(f"Processed {i+1}/{len(df['SAM UEI'])} items...")
 
-        generateDataFile(request_dict)
+    # pf2 = pd.DataFrame.from_dict(res_dict['results'])
     
+    # print(pf2)
+
+    # #TODO: Check if data.txt exists and then make a txt file
+
+    # pf2.to_csv("data.txt", sep='\t', index=False)
+    # end = time.time()
+
+    # print(f"Process finished in: {end - start:2f} seconds")
 
 if __name__=="__main__": 
     main() 

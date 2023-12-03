@@ -23,7 +23,16 @@ def processRequest(recipient, payload):
         print(erre)
     return request_dict
 
+"""
+Generates a csv file to import into a spreadsheet program.
+Input: A dictionary object and a file name
+Returns: None
+"""
+# def generateDataFile(dict, file):
+#     #Check if the file exists
+#     if exists(file):
 
+           
 """
 Calculates the total amount of contract award money for a specific company
 """
@@ -44,25 +53,30 @@ def exists(file):
     check_file = os.path.isfile(path)
     return check_file
 
-#TODO: Write a function to determine what file type is being used
 
 def main():
     df = pd.read_csv('testsheet.csv')
-    # print(df.keys())
-    # for val in df['SAM UEI']:
-    #     print(val)
 
-    #print(df['SAM UEI'][2])
+    #Response dictionary: Final dictionary to be used to build the csv file
+    res_dict = {'results':[]}
+    for i in range(len(df['SAM UEI'])):
+        #Response object in the form of a python dictionary
+        
+        response = processRequest(df['SAM UEI'][i], payload)
+        
+        #Current award total being processed
+        curAwardTotal = getAwardTotal(response)
+       
+        #Current company being processed
+        curCompany = df['Vendor'][i]
 
-    #Response object in the form of a python dictionary
-    response = processRequest(df['SAM UEI'][2], payload)
-    
-    print(getAwardTotal(response))
-   
-    if exists('data.txt'):
-        print('True')
-    else:
-        print('False')
+        #Appends the company name and total award amount to the dictionary
+        res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
+
+    pf2 = pd.DataFrame.from_dict(res_dict['results'])
+    print(pf2)
+
+
 
    
 
