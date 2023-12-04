@@ -3,10 +3,11 @@ from requests_cache import CachedSession
 import os.path
 import pandas as pd
 import time
+from datetime import timedelta
 
 #Session Caching settings
 
-session = CachedSession(allowable_methods=('Get, POST'), expire_after=60)
+session = CachedSession(allowable_methods=('Get, POST'), expire_after=timedelta(days=7)) #Change to multiple hours/days
 
 #POST request to send to the API
 payload = {
@@ -37,29 +38,6 @@ payload = {
 
 
 """Pandas Dataframe work"""
-
-"""
-Sends a call to the API after being given the recipient name from a DataFrame object and a POST request payload.
-Returns "request_dict": The response object from the API Call in the form of a python dictionary.
-"""
-def processRequest(recipient, payload):
-    payload['filters']['recipient_search_text'] = [f'{recipient}']
-    try:
-        request = requests.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
-        request.raise_for_status()
-        request_dict = request.json()
-        time.sleep(0.25)   
-    except requests.exceptions.HTTPError as errh:
-        print(errh)
-    except requests.exceptions.ConnectionError as errc:
-        print(errc)
-    except requests.exceptions.Timeout as errt:
-        print(errt)
-    except requests.exceptions.RequestException as erre:
-        print(erre)
-
-
-
            
 """
 Calculates the total amount of contract award money for a specific company
