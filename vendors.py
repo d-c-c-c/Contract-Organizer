@@ -4,6 +4,7 @@ import os.path
 import pandas as pd
 import time
 from datetime import timedelta
+import re
 
 #Session Caching settings
 
@@ -38,7 +39,26 @@ payload = {
 
 
 """Pandas Dataframe work"""
-           
+
+"""
+Find and set the primary key in a dataset based on the list of column names.
+TODO: Currently using hardcoded values. Find a way to make this dynamic.
+"""
+def findPrimaryKey(lst):
+    # List of names possible for use as the primary key. It should either be the SAM UEI or the Company Name.
+    possibleKeyNames = ['SAM UEI','SAMUEI','Company Name','Organization Name','Name','Vendor','Vendor Name']
+    pKey = None
+    # SAM UEI is the desired value. Check for that first
+    if 'SAM UEI' in lst:
+        pKey = 'SAM UEI'
+        return pKey
+    
+    #If SAM UEI is not in the list, check for alternatives
+    for item in lst:
+        if item.lower() in [name.lower() for name in possibleKeyNames]:
+            pKey = item
+            break
+    return pKey
 """
 Calculates the total amount of contract award money for a specific company
 """
@@ -59,67 +79,109 @@ def exists(file):
     check_file = os.path.isfile(path)
     return check_file
 
+"""Cleans a string of excess characters such as '', \n, and \t"""
+def cleanStr(str):
+    str = str.replace('\t', '').replace('\n', '').replace('"', '')
+    return str
+
 def main():
     # Reading in and sanitizing the data from the csv file
     pd.options.display.float_format = '{:.2f}'.format
-    df = pd.read_csv('vendorssheet.csv')
-    df = df[['Vendor', 'SAM UEI']]
-    #Drops NaN values from the table
-    df = df.dropna()
-    #Resetting index to 6
-    #NOTE: Hard-coded value. Need to find a way to make this value dynamic
-    df.index = df.index-6
+
+    # Check user input to determine if the file is valid, if it is, check the file extension to determine which function to use
+    while True:
+        try:
+            # List of columns in the resulting dataframe; To be used later
+            columnList = []
+            file = input("Input the file name here (.txt, .csv, .xlsx): ")
+            # Isolating the file extension to determine which Dataframe function to use
+            match = re.search(r'(csv|CSV|xlsx|XLSX|txt|TXT)$', file)
+            extension = match.group(0)
+
+            if extension == "xlsx":
+                df = pd.read_excel(f'{file}', engine='openpyxl')
+                columnList = list(df.columns)
+            else:
+                df = pd.read_csv(f'{file}', sep="delimiter")
+                columnList = list(df.columns)
+                # csv column names seem to all be in one string
+                # Clean csv data
+                # TODO: Add a check in case there's more than one item in the csv list
+                # TODO: Find a way to split even if there's no comma
+                columnList = columnList[0].split('')
+                if '' in columnList:
+                    columnList.remove('')
+                for item in range(len(columnList)):
+                    columnList[item] = cleanStr(columnList[item])
+            break
+        except AttributeError:
+            print("ERROR: Please enter a file with a valid extension (.txt, .csv, .xlsx).")
+            time.sleep(0.25)
+            continue
+   
+    print(columnList)
+   
+    pKey = findPrimaryKey(columnList)
+    print(pKey)
+    # Removing NaN rows at the beginning of the file
+    for i in range(len(df[pKey])):
+        value = df[pKey][i]
+        if type(value) == float:
+            df = df.drop([i])
+        else:
+            continue
+    print(df)
     #Response dictionary: Final dictionary to be used to build the csv file
 
     """
     NOTE: Pretty slow execution, especially if we'll be dealing with hundreds/thousands of companies.
     Function calls slow down execution, so maybe just do everything inside main? Leads to messier code but potentially faster execution times
     """
-    start = time.time()
-    res_dict = {'results':[]}
-    for i in range(len(df['SAM UEI'])):
+    # start = time.time()
+    # res_dict = {'results':[]}
+    # for i in range(len(df['SAM UEI'])):
         
-        #Response object in the form of a python dictionary
+    #     #Response object in the form of a python dictionary
         
-        payload['filters']['recipient_search_text'] = [f'{df["SAM UEI"][i]}']
-        try:
-            request = session.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
-            request.raise_for_status()
-            response = request.json()
+    #     payload['filters']['recipient_search_text'] = [f'{df["SAM UEI"][i]}']
+    #     try:
+    #         request = session.post("https://api.usaspending.gov/api/v2/search/spending_by_award", json=payload) #Rememebr to add back timeout=10
+    #         request.raise_for_status()
+    #         response = request.json()
  
-        except requests.exceptions.HTTPError as errh:
-            print(errh)
-        except requests.exceptions.ConnectionError as errc:
-            print(errc)
-        except requests.exceptions.Timeout as errt:
-            print(errt)
-        except requests.exceptions.RequestException as erre:
-            print(erre)
-        except Exception as e: #Catch generic exceptions
-            print(e)
+    #     except requests.exceptions.HTTPError as errh:
+    #         print(errh)
+    #     except requests.exceptions.ConnectionError as errc:
+    #         print(errc)
+    #     except requests.exceptions.Timeout as errt:
+    #         print(errt)
+    #     except requests.exceptions.RequestException as erre:
+    #         print(erre)
+    #     except Exception as e: #Catch generic exceptions
+    #         print(e)
 
-        #response = processRequest(df['SAM UEI'][i], payload)
+    #     #response = processRequest(df['SAM UEI'][i], payload)
         
-        #Current award total being processed
-        curAwardTotal = getAwardTotal(response)
+    #     #Current award total being processed
+    #     curAwardTotal = getAwardTotal(response)
        
-        #Current company being processed
-        curCompany = df['Vendor'][i]
+    #     #Current company being processed
+    #     curCompany = df['Vendor'][i]
 
-        #Appends the company name and total award amount to the dictionary
-        res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
+    #     #Appends the company name and total award amount to the dictionary
+    #     res_dict['results'] += [{"Company Name": curCompany,"Total Awards": curAwardTotal}]
 
-        print(f"Processed {i+1}/{len(df['SAM UEI'])} items...")
+    #     print(f"Processed {i+1}/{len(df['SAM UEI'])} items...")
 
-    pf2 = pd.DataFrame.from_dict(res_dict['results'])
+    # pf2 = pd.DataFrame.from_dict(res_dict['results'])
     
 
-    # #TODO: Check if data.txt exists and then make a txt file
+    # # #TODO: Check if data.txt exists and then make a txt file
 
-    pf2.to_csv("data.txt", sep='\t', index=False)
-    end = time.time()
+    # pf2.to_csv("data.txt", sep='\t', index=False)
+    # end = time.time()
 
-    print(f"Process finished in: {end - start:2f} seconds")
+    # print(f"Process finished in: {end - start:2f} seconds")
 
 if __name__=="__main__": 
     main() 
