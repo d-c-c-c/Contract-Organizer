@@ -153,9 +153,6 @@ def main():
 
     cName = findCompanyColumn(columnList)
 
-    print(pKey)
-    print(cName)
-    print(columnList)
     #Response dictionary: Final dictionary to be used to build the csv file
 
     """
